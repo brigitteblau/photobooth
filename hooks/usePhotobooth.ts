@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createStrip } from "@/lib/stripRenderer";
+import { createSheet, createStrip } from "@/lib/stripRenderer";
 
 export type Step =
   | "intro"
@@ -25,6 +25,8 @@ export const POSE_PROMPTS = [
 const CAPTURE_DELAY_MS = 1200;
 // Tiempo que se muestra "retirá tu foto" antes de volver al estado listo.
 const DONE_SCREEN_MS = 6000;
+// Cuántas copias de la tira van en una misma hoja (probá 3 o 4 según se vea mejor).
+const COPIES_PER_SHEET = 4;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -178,8 +180,10 @@ export function usePhotobooth() {
       setFinalStrip(strip);
 
       // Impresión automática, sin que la persona toque nada.
+      // Se imprime una hoja con varias copias de la tira (para cortar).
       setStep("printing");
-      await sendToPrinter(strip);
+      const sheet = await createSheet(strip, COPIES_PER_SHEET);
+      await sendToPrinter(sheet);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
       setStep("done");

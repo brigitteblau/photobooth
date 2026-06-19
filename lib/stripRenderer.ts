@@ -143,3 +143,52 @@ export async function createStrip(photoList: string[]): Promise<string> {
 
   return canvas.toDataURL("image/png");
 }
+
+/**
+ * Arma UNA hoja con varias copias de la misma tira, una al lado de la otra,
+ * con líneas de corte punteadas para separarlas con tijera.
+ *
+ * `copies` = cuántas copias en la hoja (3 o 4 suele ser lo mejor).
+ * Se imprime con "ajustar a la página", así que se adapta al papel real.
+ */
+export async function createSheet(strip: string, copies: number): Promise<string> {
+  const img = await loadImage(strip);
+
+  const margin = 48; // borde blanco de la hoja
+  const gap = 40; // separación entre copias (zona de corte)
+
+  const sheetWidth = margin * 2 + copies * img.width + (copies - 1) * gap;
+  const sheetHeight = margin * 2 + img.height;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sheetWidth;
+  canvas.height = sheetHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return strip;
+
+  // Fondo blanco: ahorra tóner/tinta y deja claras las líneas de corte.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, sheetWidth, sheetHeight);
+
+  for (let i = 0; i < copies; i++) {
+    const x = margin + i * (img.width + gap);
+    ctx.drawImage(img, x, margin, img.width, img.height);
+
+    // Línea de corte punteada entre copias.
+    if (i < copies - 1) {
+      const lineX = x + img.width + gap / 2;
+      ctx.save();
+      ctx.strokeStyle = "#9aa0a6";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(lineX, margin / 2);
+      ctx.lineTo(lineX, sheetHeight - margin / 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  return canvas.toDataURL("image/png");
+}
