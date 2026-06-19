@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createStrip } from "@/lib/stripRenderer";
 
-export type Step = "intro" | "camera" | "countdown" | "shooting" | "preview";
+export type Step =
+  | "intro"
+  | "camera"
+  | "countdown"
+  | "shooting"
+  | "printing"
+  | "done";
+
+export type PrintStatus = "idle" | "printing" | "ok" | "error";
 
 export const PHOTO_COUNT = 4;
 
@@ -15,6 +23,8 @@ export const POSE_PROMPTS = [
 ];
 
 const CAPTURE_DELAY_MS = 1200;
+// Tiempo que se muestra "retirá tu foto" antes de volver al estado listo.
+const DONE_SCREEN_MS = 6000;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,10 +40,21 @@ export function usePhotobooth() {
   const [poseIndex, setPoseIndex] = useState(0);
   const [flash, setFlash] = useState(false);
   const [scanningIndex, setScanningIndex] = useState<number | null>(null);
+  const [printStatus, setPrintStatus] = useState<PrintStatus>("idle");
+  const [printError, setPrintError] = useState("");
+
+  // Evita que un segundo botonazo dispare la secuencia mientras ya corre.
+  const runningRef = useRef(false);
 
   const startCamera = useCallback(async () => {
     setCameraError("");
     setStep("camera");
+
+    // Si ya hay un stream activo (re-arranque del loop) no lo pedimos de nuevo.
+    if (videoRef.current?.srcObject) {
+      await videoRef.current.play().catch(() => {});
+      return;
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -79,70 +100,27 @@ export function usePhotobooth() {
     return canvas.toDataURL("image/png");
   }
 
-  const startExperience = useCallback(async () => {
-    setPhotos([]);
-    setFinalStrip(null);
-    setStep("countdown");
+  // Manda la tira a la impresora vía la API local (CUPS / lp). Silenciosa.
+  const sendToPrinter = useCallback(async (strip: string) => {
+    setPrintStatus("printing");
+    setPrintError("");
 
-    for (let i = 3; i >= 1; i--) {
-      setCountdown(i);
-      await wait(1000);
-    }
+    try {
+      const res = await fetch("/api/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: strip }),
+      });
+      const data = await res.json();
 
-    setCountdown(null);
-    setStep("shooting");
-
-    const newPhotos: string[] = [];
-
-    for (let i = 0; i < PHOTO_COUNT; i++) {
-      setPoseIndex(i);
-      await wait(CAPTURE_DELAY_MS);
-
-      setFlash(true);
-      const photo = capturePhoto();
-      await wait(120);
-      setFlash(false);
-
-      if (photo) {
-        newPhotos.push(photo);
-        setPhotos([...newPhotos]);
-        setScanningIndex(i);
-        await wait(700);
-        setScanningIndex(null);
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Error al imprimir");
       }
-
-      await wait(500);
+      setPrintStatus("ok");
+    } catch (err) {
+      setPrintStatus("error");
+      setPrintError(err instanceof Error ? err.message : "Error al imprimir");
     }
-
-    const strip = await createStrip(newPhotos);
-    setFinalStrip(strip);
-    setStep("preview");
-  }, []);
-
-  const downloadStrip = useCallback(() => {
-    if (!finalStrip) return;
-
-    const a = document.createElement("a");
-    a.href = finalStrip;
-    a.download = "tic-photobooth.png";
-    a.click();
-  }, [finalStrip]);
-
-  const shareStrip = useCallback(async () => {
-    if (!finalStrip) return;
-
-    const blob = await (await fetch(finalStrip)).blob();
-    const file = new File([blob], "tic-photobooth.png", { type: "image/png" });
-
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title: "TIC Experience Photobooth", files: [file] });
-    } else {
-      downloadStrip();
-    }
-  }, [downloadStrip, finalStrip]);
-
-  const printStrip = useCallback(() => {
-    window.print();
   }, []);
 
   const reset = useCallback(() => {
@@ -151,22 +129,79 @@ export function usePhotobooth() {
     setPoseIndex(0);
     setScanningIndex(null);
     setCountdown(null);
+    setPrintStatus("idle");
+    setPrintError("");
     setStep("camera");
   }, []);
 
+  // Secuencia completa y automática: countdown -> 4 fotos -> tira -> imprime -> vuelve.
+  const startExperience = useCallback(async () => {
+    if (runningRef.current) return;
+    runningRef.current = true;
+
+    try {
+      setPhotos([]);
+      setFinalStrip(null);
+      setStep("countdown");
+
+      for (let i = 3; i >= 1; i--) {
+        setCountdown(i);
+        await wait(1000);
+      }
+
+      setCountdown(null);
+      setStep("shooting");
+
+      const newPhotos: string[] = [];
+
+      for (let i = 0; i < PHOTO_COUNT; i++) {
+        setPoseIndex(i);
+        await wait(CAPTURE_DELAY_MS);
+
+        setFlash(true);
+        const photo = capturePhoto();
+        await wait(120);
+        setFlash(false);
+
+        if (photo) {
+          newPhotos.push(photo);
+          setPhotos([...newPhotos]);
+          setScanningIndex(i);
+          await wait(700);
+          setScanningIndex(null);
+        }
+
+        await wait(500);
+      }
+
+      const strip = await createStrip(newPhotos);
+      setFinalStrip(strip);
+
+      // Impresión automática, sin que la persona toque nada.
+      setStep("printing");
+      await sendToPrinter(strip);
+
+      // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
+      setStep("done");
+      await wait(DONE_SCREEN_MS);
+      reset();
+    } finally {
+      runningRef.current = false;
+    }
+  }, [reset, sendToPrinter]);
+
+  // Botón físico (arcade USB / encoder configurado como Space).
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.code === "Space") {
-        e.preventDefault();
+      if (e.code !== "Space") return;
+      e.preventDefault();
 
-        if (step === "intro") {
-          startCamera();
-        }
-
-        if (step === "camera") {
-          startExperience();
-        }
+      if (step === "intro") {
+        startCamera();
+      } else if (step === "camera") {
+        startExperience();
       }
+      // Durante countdown/shooting/printing/done el botón se ignora.
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -183,11 +218,10 @@ export function usePhotobooth() {
     poseIndex,
     flash,
     scanningIndex,
+    printStatus,
+    printError,
     startCamera,
     startExperience,
-    shareStrip,
-    downloadStrip,
-    printStrip,
     reset,
   };
 }

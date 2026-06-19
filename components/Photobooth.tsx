@@ -3,7 +3,7 @@
 import { usePhotobooth } from "@/hooks/usePhotobooth";
 import { IntroStep } from "@/components/steps/IntroStep";
 import { CameraStep } from "@/components/steps/CameraStep";
-import { PreviewStep } from "@/components/steps/PreviewStep";
+import { ResultStep } from "@/components/steps/ResultStep";
 
 export function Photobooth() {
   const pb = usePhotobooth();
@@ -38,13 +38,12 @@ export function Photobooth() {
         />
       )}
 
-      {pb.step === "preview" && pb.finalStrip && (
-        <PreviewStep
+      {(pb.step === "printing" || pb.step === "done") && pb.finalStrip && (
+        <ResultStep
           finalStrip={pb.finalStrip}
-          onShare={pb.shareStrip}
-          onDownload={pb.downloadStrip}
-          onPrint={pb.printStrip}
-          onReset={pb.reset}
+          step={pb.step}
+          printStatus={pb.printStatus}
+          printError={pb.printError}
         />
       )}
     </main>
