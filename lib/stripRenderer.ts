@@ -145,20 +145,25 @@ export async function createStrip(photoList: string[]): Promise<string> {
 }
 
 /**
- * Arma UNA hoja con varias copias de la misma tira, una al lado de la otra,
- * con líneas de corte punteadas para separarlas con tijera.
+ * Arma UNA hoja con varias copias de la misma tira distribuidas en grilla
+ * (ej: 2 columnas x 2 filas = 4 copias), con líneas de corte punteadas.
  *
- * `copies` = cuántas copias en la hoja (3 o 4 suele ser lo mejor).
- * Se imprime con "ajustar a la página", así que se adapta al papel real.
+ * `cols` x `rows` = cantidad de copias. 2x2 = 4 copias (recomendado para
+ * hoja Carta/A4). Se imprime con "ajustar a la página", así que se adapta
+ * al papel real (Carta, A4, 4x6, etc.).
  */
-export async function createSheet(strip: string, copies: number): Promise<string> {
+export async function createSheet(
+  strip: string,
+  cols: number,
+  rows: number
+): Promise<string> {
   const img = await loadImage(strip);
 
   const margin = 48; // borde blanco de la hoja
   const gap = 40; // separación entre copias (zona de corte)
 
-  const sheetWidth = margin * 2 + copies * img.width + (copies - 1) * gap;
-  const sheetHeight = margin * 2 + img.height;
+  const sheetWidth = margin * 2 + cols * img.width + (cols - 1) * gap;
+  const sheetHeight = margin * 2 + rows * img.height + (rows - 1) * gap;
 
   const canvas = document.createElement("canvas");
   canvas.width = sheetWidth;
@@ -171,24 +176,36 @@ export async function createSheet(strip: string, copies: number): Promise<string
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, sheetWidth, sheetHeight);
 
-  for (let i = 0; i < copies; i++) {
-    const x = margin + i * (img.width + gap);
-    ctx.drawImage(img, x, margin, img.width, img.height);
-
-    // Línea de corte punteada entre copias.
-    if (i < copies - 1) {
-      const lineX = x + img.width + gap / 2;
-      ctx.save();
-      ctx.strokeStyle = "#9aa0a6";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([8, 8]);
-      ctx.beginPath();
-      ctx.moveTo(lineX, margin / 2);
-      ctx.lineTo(lineX, sheetHeight - margin / 2);
-      ctx.stroke();
-      ctx.restore();
+  // Dibujar cada copia en su celda de la grilla.
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = margin + c * (img.width + gap);
+      const y = margin + r * (img.height + gap);
+      ctx.drawImage(img, x, y, img.width, img.height);
     }
   }
+
+  // Líneas de corte punteadas (verticales y horizontales) entre las copias.
+  ctx.save();
+  ctx.strokeStyle = "#9aa0a6";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 8]);
+
+  for (let c = 1; c < cols; c++) {
+    const lineX = margin + c * img.width + (c - 0.5) * gap;
+    ctx.beginPath();
+    ctx.moveTo(lineX, margin / 2);
+    ctx.lineTo(lineX, sheetHeight - margin / 2);
+    ctx.stroke();
+  }
+  for (let r = 1; r < rows; r++) {
+    const lineY = margin + r * img.height + (r - 0.5) * gap;
+    ctx.beginPath();
+    ctx.moveTo(margin / 2, lineY);
+    ctx.lineTo(sheetWidth - margin / 2, lineY);
+    ctx.stroke();
+  }
+  ctx.restore();
 
   return canvas.toDataURL("image/png");
 }

@@ -25,8 +25,10 @@ export const POSE_PROMPTS = [
 const CAPTURE_DELAY_MS = 1200;
 // Tiempo que se muestra "retirá tu foto" antes de volver al estado listo.
 const DONE_SCREEN_MS = 6000;
-// Cuántas copias de la tira van en una misma hoja (probá 3 o 4 según se vea mejor).
-const COPIES_PER_SHEET = 4;
+// Distribución de copias en la hoja: columnas x filas.
+// 2 x 2 = 4 copias (2 arriba, 2 abajo), ideal para papel Carta/A4.
+const SHEET_COLS = 2;
+const SHEET_ROWS = 2;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -182,7 +184,7 @@ export function usePhotobooth() {
       // Impresión automática, sin que la persona toque nada.
       // Se imprime una hoja con varias copias de la tira (para cortar).
       setStep("printing");
-      const sheet = await createSheet(strip, COPIES_PER_SHEET);
+      const sheet = await createSheet(strip, SHEET_COLS, SHEET_ROWS);
       await sendToPrinter(sheet);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
