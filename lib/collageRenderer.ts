@@ -190,7 +190,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
     }
   }
 
-  // ---- Pie: ORT ----
+  // ---- Pie: ORT (texto, hasta tener un logo usable) ----
   ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
   ctx.font = '900 34px Raleway, Arial';
