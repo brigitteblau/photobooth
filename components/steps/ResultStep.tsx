@@ -26,10 +26,10 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
             <Loader2 size={40} className="animate-spin text-[#FF5C2B]" />
             <div>
               <h2 className="font-sans text-5xl font-bold tracking-[-0.05em] text-white">
-                Imprimiendo…
+                Generando PDF…
               </h2>
               <p className="mt-3 font-mono text-sm leading-relaxed text-white/40">
-                Tu tira se está imprimiendo. Esperá un momento.
+                Preparando la simulación de impresión. Esperá un momento.
               </p>
             </div>
           </>
@@ -40,13 +40,13 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
             <CheckCircle2 size={40} className="text-[#FF5C2B]" />
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[#FF5C2B]">
-                ● Listo
+                ● PDF listo
               </p>
               <h2 className="mt-2 font-sans text-5xl font-bold tracking-[-0.05em] text-white">
-                Retirá tu foto
+                Mirá el PDF
               </h2>
               <p className="mt-3 font-mono text-sm leading-relaxed text-white/40">
-                Gracias. Preparando la próxima toma…
+                Se abrió/descargó la simulación A4. Preparando la próxima…
               </p>
             </div>
           </>

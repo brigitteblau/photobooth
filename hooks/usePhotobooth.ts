@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSheet, createStrip } from "@/lib/stripRenderer";
+import { createA4Sheet, createCollage } from "@/lib/collageRenderer";
 
 export type Step =
   | "intro"
@@ -23,12 +23,8 @@ export const POSE_PROMPTS = [
 ];
 
 const CAPTURE_DELAY_MS = 1200;
-// Tiempo que se muestra "retirá tu foto" antes de volver al estado listo.
-const DONE_SCREEN_MS = 6000;
-// Distribución de copias en la hoja: columnas x filas.
-// 2 x 2 = 4 copias (2 arriba, 2 abajo), ideal para papel Carta/A4.
-const SHEET_COLS = 2;
-const SHEET_ROWS = 2;
+// Tiempo que se muestra la pantalla final antes de volver al estado listo.
+const DONE_SCREEN_MS = 8000;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -104,26 +100,34 @@ export function usePhotobooth() {
     return canvas.toDataURL("image/png");
   }
 
-  // Manda la tira a la impresora vía la API local (CUPS / lp). Silenciosa.
-  const sendToPrinter = useCallback(async (strip: string) => {
+  // SIMULACIÓN: en vez de imprimir, genera un PDF tamaño A4 horizontal que
+  // muestra exactamente cómo va a quedar la hoja impresa, y lo abre/descarga.
+  const generatePdf = useCallback(async (sheet: string) => {
     setPrintStatus("printing");
     setPrintError("");
 
     try {
-      const res = await fetch("/api/print", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: strip }),
-      });
-      const data = await res.json();
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      // La hoja ya tiene proporción A4 apaisada, así que llena toda la página.
+      pdf.addImage(sheet, "PNG", 0, 0, 297, 210);
 
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Error al imprimir");
-      }
+      const blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+
+      // Abrir en pestaña nueva para ver la simulación.
+      window.open(url, "_blank");
+
+      // Y además descargarlo, por si el navegador bloquea la pestaña.
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `photobooth-simulacion-${Date.now()}.pdf`;
+      a.click();
+
       setPrintStatus("ok");
     } catch (err) {
       setPrintStatus("error");
-      setPrintError(err instanceof Error ? err.message : "Error al imprimir");
+      setPrintError(err instanceof Error ? err.message : "Error al generar el PDF");
     }
   }, []);
 
@@ -178,14 +182,14 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      const strip = await createStrip(newPhotos);
-      setFinalStrip(strip);
+      // Las 4 fotos en un collage 2x2 (lo que se muestra en pantalla).
+      const collage = await createCollage(newPhotos);
+      setFinalStrip(collage);
 
-      // Impresión automática, sin que la persona toque nada.
-      // Se imprime una hoja con varias copias de la tira (para cortar).
+      // SIMULACIÓN: hoja A4 con 4 copias del collage -> PDF de previsualización.
       setStep("printing");
-      const sheet = await createSheet(strip, SHEET_COLS, SHEET_ROWS);
-      await sendToPrinter(sheet);
+      const sheet = await createA4Sheet(collage);
+      await generatePdf(sheet);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
       setStep("done");
@@ -194,7 +198,7 @@ export function usePhotobooth() {
     } finally {
       runningRef.current = false;
     }
-  }, [reset, sendToPrinter]);
+  }, [reset, generatePdf]);
 
   // Botón físico (arcade USB / encoder configurado como Space).
   useEffect(() => {

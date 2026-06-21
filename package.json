@@ -9,6 +9,7 @@
     "@radix-ui/react-slot": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
+    "jspdf": "^4.2.1",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
@@ -17,10 +18,10 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
-    "tailwindcss": "latest",
-    "typescript": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
   }
 }
