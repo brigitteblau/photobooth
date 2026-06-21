@@ -8,9 +8,10 @@ const SCHOOL_NAME = "ORT";
 const FRAME_LABEL = "TIC PHOTOBOOTH";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("No se pudo cargar una imagen"));
     img.src = src;
   });
 }
@@ -199,5 +200,6 @@ export async function createA4Sheet(collage: string): Promise<string> {
   }
   ctx.restore();
 
-  return canvas.toDataURL("image/png");
+  // JPEG: mucho más liviano que PNG para fotos, así jsPDF lo incrusta bien.
+  return canvas.toDataURL("image/jpeg", 0.92);
 }
