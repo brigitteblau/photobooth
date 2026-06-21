@@ -1,11 +1,11 @@
-// Renderer alternativo (rama simulacion-pdf):
-//  - createCollage: las 4 fotos de una persona en un cuadro 2x2 (no en tira).
-//  - createA4Sheet: 4 copias de ese cuadro en una hoja tamaño A4 horizontal,
-//    con líneas de corte, lista para previsualizar en PDF.
+// Renderer del marco de impresión (rama simulacion-pdf):
+//  - createCollage: marco TIC EXPERIENCE 2026 con las 4 fotos en grilla 2x2 y
+//    el pie ORT, fondo navy con borde rosa y confetti (como el diseño).
+//  - createA4Sheet: 4 copias de ese marco en una hoja A4 horizontal, con líneas
+//    de corte, para previsualizar en PDF.
 
-const EVENT_NAME = "TIC Experience";
-const SCHOOL_NAME = "ORT";
-const FRAME_LABEL = "TIC PHOTOBOOTH";
+const NAVY = "#0C043F";
+const PINK = "#FB276A";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -33,25 +33,60 @@ function roundRect(
   ctx.closePath();
 }
 
+async function ensureFonts() {
+  try {
+    if (typeof document !== "undefined" && document.fonts) {
+      await document.fonts.load('900 64px Raleway');
+      await document.fonts.load('400 24px "Roboto Mono"');
+      await document.fonts.ready;
+    }
+  } catch {
+    /* si falla, se usa la fuente por defecto */
+  }
+}
+
+// Confetti chico dentro del marco (posiciones relativas al ancho/alto).
+const CONFETTI: { x: number; y: number; r: number; color: string; type: "dot" | "tri" }[] = [
+  { x: 0.07, y: 0.2, r: 7, color: "#3BA0FF", type: "dot" },
+  { x: 0.93, y: 0.18, r: 7, color: "#9FEA18", type: "dot" },
+  { x: 0.5, y: 0.13, r: 7, color: "#F2C50D", type: "tri" },
+  { x: 0.06, y: 0.55, r: 8, color: "#A431FF", type: "tri" },
+  { x: 0.95, y: 0.6, r: 7, color: "#FF6C31", type: "dot" },
+  { x: 0.1, y: 0.85, r: 7, color: "#9FEA18", type: "dot" },
+  { x: 0.9, y: 0.86, r: 8, color: "#F2C50D", type: "tri" },
+  { x: 0.5, y: 0.93, r: 6, color: "#3BA0FF", type: "dot" },
+];
+
+function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  for (const c of CONFETTI) {
+    ctx.fillStyle = c.color;
+    const px = c.x * w;
+    const py = c.y * h;
+    if (c.type === "dot") {
+      ctx.beginPath();
+      ctx.arc(px, py, c.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(px, py - c.r);
+      ctx.lineTo(px + c.r, py + c.r);
+      ctx.lineTo(px - c.r, py + c.r);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+}
+
 /**
- * Las 4 fotos en un cuadro 2x2 (2 arriba, 2 abajo) con la marca del evento.
+ * Las 4 fotos en grilla 2x2 dentro del marco TIC EXPERIENCE 2026 (con ORT).
  * Proporción ~A4/4 horizontal, para que al cortar la hoja cada copia quede
  * de un tamaño tipo foto 10x15.
  */
 export async function createCollage(photoList: string[]): Promise<string> {
+  await ensureFonts();
+
   const width = 1414;
   const height = 1000;
-  const pad = 44;
-  const headerH = 78;
-  const footerH = 70;
-  const gap = 18;
-  const cols = 2;
-  const rows = 2;
-
-  const photoTop = pad + headerH;
-  const photoW = (width - pad * 2 - gap * (cols - 1)) / cols;
-  const photoAreaH = height - photoTop - footerH - pad;
-  const photoH = (photoAreaH - gap * (rows - 1)) / rows;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -59,47 +94,88 @@ export async function createCollage(photoList: string[]): Promise<string> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  // Fondo
-  ctx.fillStyle = "#0d0d0b";
-  roundRect(ctx, 0, 0, width, height, 22);
+  // Fondo navy + borde rosa
+  ctx.fillStyle = NAVY;
+  roundRect(ctx, 0, 0, width, height, 28);
   ctx.fill();
-
-  // Header
-  ctx.fillStyle = "#FF5C2B";
-  ctx.font = "700 13px monospace";
-  ctx.textAlign = "left";
-  ctx.fillText("●  REC", pad, pad + 24);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "700 34px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText(FRAME_LABEL, width / 2, pad + 34);
-
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
-  ctx.font = "13px monospace";
-  ctx.fillText(EVENT_NAME.toUpperCase(), width / 2, pad + 58);
-
-  ctx.strokeStyle = "#FF5C2B";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(pad, photoTop - 8);
-  ctx.lineTo(width - pad, photoTop - 8);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = PINK;
+  roundRect(ctx, 7, 7, width - 14, height - 14, 24);
   ctx.stroke();
 
-  // Fotos en grilla 2x2
+  drawConfetti(ctx, width, height);
+
+  // ---- Header: TIC EXPERIENCE (con la cruz como X) + 2026 ----
+  ctx.textBaseline = "alphabetic";
+  ctx.font = '900 78px Raleway, Arial';
+  ctx.textAlign = "left";
+
+  const part1 = "E";
+  const part2 = "PERIENCE";
+  const w1 = ctx.measureText(part1).width;
+  const w2 = ctx.measureText(part2).width;
+  const crossSize = 86;
+  const totalW = w1 + crossSize * 0.78 + w2;
+  const sx = (width - totalW) / 2;
+  const baseY = 168;
+
+  // "TIC" arriba, alineado a la izquierda con EXPERIENCE
+  ctx.font = '900 48px Raleway, Arial';
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("TIC", sx, baseY - 70);
+
+  // "EXPERIENCE" con la cruz como X
+  ctx.font = '900 78px Raleway, Arial';
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(part1, sx, baseY);
+  try {
+    const cross = await loadImage("/stickers/cruz.svg");
+    ctx.drawImage(cross, sx + w1 - 10, baseY - crossSize + 10, crossSize, crossSize);
+  } catch {
+    ctx.fillText("X", sx + w1, baseY);
+  }
+  ctx.fillText(part2, sx + w1 + crossSize * 0.78, baseY);
+
+  // Etiqueta 2026
+  try {
+    const tag = await loadImage("/stickers/tag2026.svg");
+    const tagW = 130;
+    const tagH = (tag.height / tag.width) * tagW;
+    ctx.drawImage(tag, sx + totalW - 40, baseY - 118, tagW, tagH);
+  } catch {
+    /* sin tag */
+  }
+
+  // Línea bajo el header
+  ctx.strokeStyle = PINK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(60, 210);
+  ctx.lineTo(width - 60, 210);
+  ctx.stroke();
+
+  // ---- Fotos en grilla 2x2 ----
+  const pad = 56;
+  const gap = 22;
+  const top = 238;
+  const footerH = 96;
+  const cols = 2;
+  const rows = 2;
+  const photoW = (width - pad * 2 - gap * (cols - 1)) / cols;
+  const photoAreaH = height - top - footerH;
+  const photoH = (photoAreaH - gap * (rows - 1)) / rows;
+
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const index = r * cols + c;
       const x = pad + c * (photoW + gap);
-      const y = photoTop + r * (photoH + gap);
+      const y = top + r * (photoH + gap);
 
       if (photoList[index]) {
         const img = await loadImage(photoList[index]);
-
         ctx.save();
-        roundRect(ctx, x, y, photoW, photoH, 12);
+        roundRect(ctx, x, y, photoW, photoH, 14);
         ctx.clip();
-
         const scale = Math.max(photoW / img.width, photoH / img.height);
         const dw = img.width * scale;
         const dh = img.height * scale;
@@ -107,46 +183,31 @@ export async function createCollage(photoList: string[]): Promise<string> {
         ctx.restore();
       }
 
-      ctx.strokeStyle =
-        index === photoList.length - 1 ? "rgba(255,92,43,0.5)" : "rgba(255,255,255,0.1)";
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, x, y, photoW, photoH, 12);
+      ctx.strokeStyle = PINK;
+      ctx.lineWidth = 6;
+      roundRect(ctx, x, y, photoW, photoH, 14);
       ctx.stroke();
-
-      ctx.fillStyle = "rgba(255,255,255,0.28)";
-      ctx.font = "11px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(`0${index + 1}`, x + photoW - 8, y + 18);
     }
   }
 
-  // Footer
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, height - footerH);
-  ctx.lineTo(width - pad, height - footerH);
-  ctx.stroke();
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "700 24px Arial";
+  // ---- Pie: ORT ----
   ctx.textAlign = "center";
-  ctx.fillText(SCHOOL_NAME, width / 2, height - footerH + 32);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = '900 34px Raleway, Arial';
+  ctx.fillText("ORT", width / 2, height - footerH + 52);
+  ctx.font = '400 18px "Roboto Mono", monospace';
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fillText("Educando para la vida", width / 2, height - footerH + 78);
 
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.font = "12px monospace";
-  ctx.fillText(new Date().toLocaleDateString("es-AR"), width / 2, height - footerH + 52);
-
-  return canvas.toDataURL("image/png");
+  return canvas.toDataURL("image/jpeg", 0.92);
 }
 
 /**
- * Hoja A4 HORIZONTAL con 4 copias del collage (grilla 2x2) y líneas de corte.
+ * Hoja A4 HORIZONTAL con 4 copias del marco (grilla 2x2) y líneas de corte.
  * El canvas tiene la proporción exacta de una A4 apaisada para que el PDF
  * muestre fielmente cómo va a quedar impreso.
  */
 export async function createA4Sheet(collage: string): Promise<string> {
-  // A4 apaisada: 297 x 210 mm -> proporción 1.4142. A 10 px/mm.
   const width = 2970;
   const height = 2100;
   const margin = 70;
@@ -179,7 +240,6 @@ export async function createA4Sheet(collage: string): Promise<string> {
     }
   }
 
-  // Líneas de corte punteadas
   ctx.save();
   ctx.strokeStyle = "#9aa0a6";
   ctx.lineWidth = 1.5;
@@ -200,6 +260,5 @@ export async function createA4Sheet(collage: string): Promise<string> {
   }
   ctx.restore();
 
-  // JPEG: mucho más liviano que PNG para fotos, así jsPDF lo incrusta bien.
   return canvas.toDataURL("image/jpeg", 0.92);
 }
