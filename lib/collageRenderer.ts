@@ -174,7 +174,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
       if (photoList[index]) {
         const img = await loadImage(photoList[index]);
         ctx.save();
-        roundRect(ctx, x, y, photoW, photoH, 14);
+        roundRect(ctx, x, y, photoW, photoH, 30);
         ctx.clip();
         const scale = Math.max(photoW / img.width, photoH / img.height);
         const dw = img.width * scale;
@@ -185,7 +185,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
 
       ctx.strokeStyle = PINK;
       ctx.lineWidth = 6;
-      roundRect(ctx, x, y, photoW, photoH, 14);
+      roundRect(ctx, x, y, photoW, photoH, 30);
       ctx.stroke();
     }
   }

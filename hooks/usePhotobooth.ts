@@ -184,9 +184,12 @@ export function usePhotobooth() {
         setPoseIndex(i);
         await wait(CAPTURE_DELAY_MS);
 
+        // Prendemos el flash y esperamos un frame para que se pinte ANTES de
+        // capturar, así la luz blanca coincide con el momento de la foto.
         setFlash(true);
+        await wait(90);
         const photo = capturePhoto();
-        await wait(120);
+        await wait(90);
         setFlash(false);
 
         if (photo) {

@@ -6,14 +6,16 @@
 type BigSticker = { src: string; top: string; left: string; size: number; rot: number };
 
 const BIG_STICKERS: BigSticker[] = [
-  { src: "/stickers/persona.svg", top: "26%", left: "17%", size: 92, rot: -8 },
-  { src: "/stickers/cerebro-verde.svg", top: "23%", left: "37%", size: 96, rot: -6 },
-  { src: "/stickers/pluma.svg", top: "11%", left: "66%", size: 96, rot: 10 },
-  { src: "/stickers/pacman.svg", top: "23%", left: "73%", size: 78, rot: 8 },
-  { src: "/stickers/tag2026.svg", top: "24%", left: "62%", size: 150, rot: -10 },
-  { src: "/stickers/celular.svg", top: "52%", left: "80%", size: 84, rot: 12 },
-  { src: "/stickers/satelite.svg", top: "55%", left: "20%", size: 110, rot: -10 },
-  { src: "/stickers/cruz.svg", top: "58%", left: "62%", size: 150, rot: 6 },
+  // Repartidos hacia los bordes; solo la cruz y el "2026" se superponen al título.
+  { src: "/stickers/persona.svg", top: "12%", left: "8%", size: 90, rot: -8 },
+  { src: "/stickers/cerebro-verde.svg", top: "9%", left: "26%", size: 92, rot: -6 },
+  { src: "/stickers/pluma.svg", top: "8%", left: "72%", size: 94, rot: 10 },
+  { src: "/stickers/pacman.svg", top: "14%", left: "88%", size: 80, rot: 8 },
+  { src: "/stickers/satelite.svg", top: "66%", left: "9%", size: 108, rot: -10 },
+  { src: "/stickers/celular.svg", top: "64%", left: "86%", size: 86, rot: 12 },
+  // Estos dos sí se superponen al texto "PHOTO BOOTH":
+  { src: "/stickers/tag2026.svg", top: "30%", left: "66%", size: 150, rot: -10 },
+  { src: "/stickers/cruz.svg", top: "55%", left: "63%", size: 150, rot: 6 },
 ];
 
 type Confetti = { type: "tulip" | "sparkle" | "dot" | "plus" | "triangle"; color: string; top: string; left: string; size: number; rot: number };
@@ -105,7 +107,11 @@ function ConfettiShape({ c }: { c: Confetti }) {
 
 export function Stickers({ variant = "full" }: { variant?: "full" | "confetti" }) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${
+        variant === "full" ? "z-30" : "z-0"
+      }`}
+    >
       {variant === "full" &&
         BIG_STICKERS.map((s, i) => (
           <img
