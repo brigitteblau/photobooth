@@ -45,14 +45,19 @@ export function usePhotobooth() {
 
   // Evita que un segundo botonazo dispare la secuencia mientras ya corre.
   const runningRef = useRef(false);
+  // Guardamos el stream para reconectarlo cuando el <video> se vuelve a montar.
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startCamera = useCallback(async () => {
     setCameraError("");
     setStep("camera");
 
-    // Si ya hay un stream activo (re-arranque del loop) no lo pedimos de nuevo.
-    if (videoRef.current?.srcObject) {
-      await videoRef.current.play().catch(() => {});
+    // Si ya pedimos la cámara antes, reusamos el mismo stream (no re-pedimos).
+    if (streamRef.current) {
+      if (videoRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        await videoRef.current.play().catch(() => {});
+      }
       return;
     }
 
@@ -61,6 +66,7 @@ export function usePhotobooth() {
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -70,6 +76,18 @@ export function usePhotobooth() {
       setCameraError("No se pudo abrir la cámara. Revisá permisos.");
     }
   }, []);
+
+  // Cada vez que volvemos a la pantalla de cámara, el <video> se re-monta y
+  // pierde el srcObject: lo reconectamos para no quedarnos sin imagen.
+  useEffect(() => {
+    if (step !== "camera" && step !== "countdown" && step !== "shooting") return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (video && stream && video.srcObject !== stream) {
+      video.srcObject = stream;
+      video.play().catch(() => {});
+    }
+  }, [step]);
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -182,13 +200,15 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      // Las 4 fotos en un collage 2x2 (lo que se muestra en pantalla).
+      // Las 4 fotos en un collage 2x2 y la hoja A4 con 4 copias.
       const collage = await createCollage(newPhotos);
-      setFinalStrip(collage);
-
-      // SIMULACIÓN: hoja A4 con 4 copias del collage -> PDF de previsualización.
-      setStep("printing");
       const sheet = await createA4Sheet(collage);
+
+      // Mostramos la HOJA completa en pantalla (lo mismo que tendrá el PDF).
+      setFinalStrip(sheet);
+
+      // SIMULACIÓN: además generamos el PDF A4 de previsualización.
+      setStep("printing");
       await generatePdf(sheet);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
