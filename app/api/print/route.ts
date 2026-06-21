@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execFile } from "node:child_process";
-import { mkdtemp, unlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, mkdtemp, unlink, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -60,18 +60,44 @@ export async function POST(req: NextRequest) {
     const base64 = image.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64, "base64");
 
+    const stamp = Date.now();
+
     const dir = await mkdtemp(join(tmpdir(), "photobooth-"));
-    tmpFile = join(dir, `strip-${Date.now()}.png`);
+    tmpFile = join(dir, `strip-${stamp}.png`);
     await writeFile(tmpFile, buffer);
+
+    // Copia digital de cada hoja en el Escritorio (sirve de respaldo y para
+    // ver el resultado aunque no haya impresora conectada).
+    let savedPath = "";
+    try {
+      const saveDir = join(homedir(), "Desktop", "photobooth-prints");
+      await mkdir(saveDir, { recursive: true });
+      savedPath = join(saveDir, `hoja-${stamp}.png`);
+      await writeFile(savedPath, buffer);
+    } catch {
+      savedPath = "";
+    }
 
     const printer = process.env.PRINTER_NAME?.trim();
     const copies = Math.max(1, parseInt(process.env.PRINT_COPIES?.trim() || "1", 10) || 1);
 
-    const message = IS_WINDOWS
-      ? await printWindows(tmpFile, printer, copies)
-      : await printUnix(tmpFile, printer, copies);
-
-    return NextResponse.json({ ok: true, message });
+    try {
+      const message = IS_WINDOWS
+        ? await printWindows(tmpFile, printer, copies)
+        : await printUnix(tmpFile, printer, copies);
+      return NextResponse.json({ ok: true, message, savedPath });
+    } catch (printErr) {
+      // Si no hay impresora, igual guardamos la copia: no es un fallo total.
+      if (savedPath) {
+        return NextResponse.json({
+          ok: true,
+          message: `Sin impresora: se guardó la hoja en ${savedPath}`,
+          savedPath,
+          printError: errorMessage(printErr),
+        });
+      }
+      throw printErr;
+    }
   } catch (err) {
     return NextResponse.json({ ok: false, error: errorMessage(err) }, { status: 500 });
   } finally {
