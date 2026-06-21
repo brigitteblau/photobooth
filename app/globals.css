@@ -1,12 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #080806;
-  --surface: #0d0d0b;
-  --surface-soft: #151511;
-  --border: rgba(255, 255, 255, 0.12);
-  --text: #f5f5f1;
-  --muted: rgba(245, 245, 241, 0.62);
+  --background: #0c043f;
+  --surface: #150a52;
+  --pink: #fb276a;
+  --pink-soft: #ff5b92;
+  --text: #ffffff;
+  --muted: rgba(255, 255, 255, 0.55);
+  --lavender: #8c84b8;
+
+  --font-raleway: "Raleway", Arial, sans-serif;
+  --font-mono: "Roboto Mono", monospace;
 }
 
 * {
@@ -17,16 +21,22 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 92, 43, 0.05), transparent 28%),
-    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.05), transparent 24%),
-    var(--background);
+  background: var(--background);
   color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-raleway), Arial, Helvetica, sans-serif;
 }
 
 button {
   font-family: inherit;
+}
+
+.font-display {
+  font-family: var(--font-raleway), Arial, sans-serif;
+  font-weight: 900;
+}
+
+.font-mono-tic {
+  font-family: var(--font-mono), monospace;
 }
 
 .kiosk {
@@ -34,21 +44,13 @@ button {
   overflow: hidden;
 }
 
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, black, transparent 80%);
-}
-
 .flash {
-  animation: flash .22s ease-out;
+  animation: flash 0.22s ease-out;
 }
 
 @keyframes flash {
   0% { opacity: 0; }
-  40% { opacity: .82; }
+  40% { opacity: 0.82; }
   100% { opacity: 0; }
 }
 
@@ -88,6 +90,15 @@ button {
 
 .strip-reveal {
   animation: strip-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+  50% { transform: translateY(-10px) rotate(var(--rot, 0deg)); }
+}
+
+.float-soft {
+  animation: float-soft 6s ease-in-out infinite;
 }
 
 @media print {
