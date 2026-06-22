@@ -100,15 +100,15 @@ function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /**
- * UNA hoja Carta (Letter horizontal) con las 4 fotos en grilla 2x2.
+ * UNA hoja A5 horizontal con las 4 fotos en grilla 2x2.
  * Navy a toda la hoja + borde rosa redondeado con margen. Pie ORT.
  */
 export async function createCollage(photoList: string[]): Promise<string> {
   await ensureFonts();
 
-  // Letter horizontal: 11 x 8.5 in -> proporción 1.294. A 300 dpi.
-  const width = 3300;
-  const height = 2550;
+  // A5 horizontal: 210 x 148 mm -> proporción 1.419. A 300 dpi.
+  const width = 2480;
+  const height = 1748;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -123,33 +123,33 @@ export async function createCollage(photoList: string[]): Promise<string> {
   drawConfetti(ctx, width, height);
 
   // Borde rosa redondeado, con margen respecto al papel
-  const margin = 70;
+  const margin = 52;
   ctx.strokeStyle = PINK;
-  ctx.lineWidth = 16;
-  roundRect(ctx, margin, margin, width - margin * 2, height - margin * 2, 90);
+  ctx.lineWidth = 12;
+  roundRect(ctx, margin, margin, width - margin * 2, height - margin * 2, 64);
   ctx.stroke();
 
   // ---- Header: TIC E✚PERIENCE 2026 ----
   ctx.textBaseline = "alphabetic";
-  ctx.font = "900 120px Raleway, Arial";
+  ctx.font = "900 90px Raleway, Arial";
   ctx.textAlign = "left";
   const w1 = ctx.measureText("E").width;
   const w2 = ctx.measureText("PERIENCE").width;
-  const crossSize = 132;
+  const crossSize = 100;
   const totalW = w1 + crossSize * 0.78 + w2;
   const sx = (width - totalW) / 2;
-  const baseY = 320;
+  const baseY = 180;
 
-  ctx.font = "900 72px Raleway, Arial";
+  ctx.font = "900 54px Raleway, Arial";
   ctx.fillStyle = "#ffffff";
-  ctx.fillText("TIC", sx, baseY - 108);
+  ctx.fillText("TIC", sx, baseY - 82);
 
-  ctx.font = "900 120px Raleway, Arial";
+  ctx.font = "900 90px Raleway, Arial";
   ctx.fillStyle = "#ffffff";
   ctx.fillText("E", sx, baseY);
   try {
     const cross = await loadImage("/stickers/cruz.svg");
-    ctx.drawImage(cross, sx + w1 - 14, baseY - crossSize + 14, crossSize, crossSize);
+    ctx.drawImage(cross, sx + w1 - 10, baseY - crossSize + 12, crossSize, crossSize);
   } catch {
     ctx.fillText("X", sx + w1, baseY);
   }
@@ -157,9 +157,9 @@ export async function createCollage(photoList: string[]): Promise<string> {
 
   try {
     const tag = await loadImage("/stickers/tag2026.svg");
-    const tagW = 200;
+    const tagW = 150;
     const tagH = (tag.height / tag.width) * tagW;
-    ctx.drawImage(tag, sx + totalW - 60, baseY - 182, tagW, tagH);
+    ctx.drawImage(tag, sx + totalW - 45, baseY - 138, tagW, tagH);
   } catch {
     /* sin tag */
   }
@@ -167,15 +167,15 @@ export async function createCollage(photoList: string[]): Promise<string> {
   ctx.strokeStyle = PINK;
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(160, 400);
-  ctx.lineTo(width - 160, 400);
+  ctx.moveTo(120, 232);
+  ctx.lineTo(width - 120, 232);
   ctx.stroke();
 
   // ---- Fotos en grilla 2x2 ----
-  const padX = 150;
-  const gap = 44;
-  const top = 470;
-  const footerH = 220;
+  const padX = 110;
+  const gap = 34;
+  const top = 250;
+  const footerH = 160;
   const cols = 2;
   const rows = 2;
   const photoW = (width - padX * 2 - gap * (cols - 1)) / cols;
@@ -191,7 +191,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
       if (photoList[index]) {
         const img = await loadImage(photoList[index]);
         ctx.save();
-        roundRect(ctx, x, y, photoW, photoH, 40);
+        roundRect(ctx, x, y, photoW, photoH, 28);
         ctx.clip();
         const scale = Math.max(photoW / img.width, photoH / img.height);
         const dw = img.width * scale;
@@ -202,7 +202,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
 
       ctx.strokeStyle = PINK;
       ctx.lineWidth = 7;
-      roundRect(ctx, x, y, photoW, photoH, 40);
+      roundRect(ctx, x, y, photoW, photoH, 28);
       ctx.stroke();
     }
   }
@@ -214,7 +214,7 @@ export async function createCollage(photoList: string[]): Promise<string> {
   const borderBottom = height - margin; // línea inferior del borde rosa
   try {
     const logo = await loadImage("/ort-logo.png");
-    const lh = 88;
+    const lh = 66;
     const lw = (logo.width / logo.height) * lh;
     const ly = footerTop + (borderBottom - footerTop - lh) / 2;
     ctx.drawImage(logo, (width - lw) / 2, ly, lw, lh);
