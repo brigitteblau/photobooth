@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, Printer } from "lucide-react";
+import { CheckCircle2, CloudOff, Loader2 } from "lucide-react";
 import type { PrintStatus, Step } from "@/hooks/usePhotobooth";
 
 interface ResultStepProps {
@@ -25,9 +25,9 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
           <>
             <Loader2 size={42} className="animate-spin text-white" />
             <div>
-              <h2 className="font-display text-4xl tracking-[-0.02em] text-white">Imprimiendo…</h2>
+              <h2 className="font-display text-4xl tracking-[-0.02em] text-white">Guardando…</h2>
               <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/80">
-                Tu foto se está imprimiendo. Esperá un momento.
+                Tu foto se está subiendo. Esperá un momento.
               </p>
             </div>
           </>
@@ -41,10 +41,10 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
                 ● Listo
               </p>
               <h2 className="font-display mt-2 text-4xl tracking-[-0.02em] text-white">
-                Retirá tu foto
+                ¡Foto guardada!
               </h2>
               <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/80">
-                Gracias. Preparando la próxima toma…
+                Se subió a Drive. Preparando la próxima toma…
               </p>
             </div>
           </>
@@ -52,13 +52,13 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
 
         {!printing && failed && (
           <>
-            <Printer size={42} className="text-white" />
+            <CloudOff size={42} className="text-white" />
             <div>
               <h2 className="font-display text-3xl tracking-[-0.02em] text-white">
-                No se pudo imprimir
+                No se pudo guardar
               </h2>
               <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/90">
-                {printError || "Revisá que la impresora esté encendida y configurada."}
+                {printError || "Revisá la conexión a internet."}
               </p>
             </div>
           </>

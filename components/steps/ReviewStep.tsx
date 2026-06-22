@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, RotateCcw } from "lucide-react";
+import { Cloud, RotateCcw } from "lucide-react";
 
 interface ReviewStepProps {
   finalStrip: string;
@@ -24,7 +24,7 @@ export function ReviewStep({ finalStrip, onConfirm, onRetake }: ReviewStepProps)
             Tu foto
           </h2>
           <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/80">
-            Imprimila si te gusta, o sacátela de nuevo.
+            Guardala si te gusta, o sacátela de nuevo.
           </p>
         </div>
 
@@ -33,8 +33,8 @@ export function ReviewStep({ finalStrip, onConfirm, onRetake }: ReviewStepProps)
             onClick={onConfirm}
             className="font-mono-tic flex w-full items-center justify-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-sm uppercase tracking-[0.2em] text-[var(--pink)] transition hover:bg-white"
           >
-            <Printer size={18} />
-            Imprimir
+            <Cloud size={18} />
+            Guardar foto
           </button>
           <button
             onClick={onRetake}

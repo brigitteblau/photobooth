@@ -11,10 +11,6 @@ export const runtime = "nodejs";
 const execFileP = promisify(execFile);
 const IS_WINDOWS = process.platform === "win32";
 
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * GET /api/print
  * Lista las impresoras instaladas. Abrí esta ruta en el navegador y copiá el
@@ -38,11 +34,10 @@ export async function GET() {
 }
 
 /**
- * POST /api/print
+ * POST /api/print  (rama solo-drive: NO imprime)
  * Body: { image: "data:image/png;base64,..." }
- * Guarda la imagen en un archivo temporal y la manda a la impresora SIN diálogo.
- *  - Windows: SumatraPDF (si SUMATRA_PATH está seteado) o, en su defecto, `mspaint /pt`.
- *  - macOS / Linux: `lp` (CUPS).
+ * Guarda la imagen local (Escritorio/photobooth-prints) y la sube a Google Drive
+ * (vía DRIVE_UPLOAD_URL). No envía nada a ninguna impresora.
  */
 export async function POST(req: NextRequest) {
   let tmpFile: string | null = null;
@@ -78,9 +73,10 @@ export async function POST(req: NextRequest) {
       savedPath = "";
     }
 
-    // Subida a Google Drive (vía un Apps Script Web App), si está configurado.
-    // No bloquea ni hace fallar la impresión si Drive falla.
+    // MODO SOLO DRIVE: no se imprime. Solo se guarda local + se sube a Drive.
     const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim();
+    let driveOk = false;
+    let driveError = "";
     if (driveUrl) {
       try {
         await fetch(driveUrl, {
@@ -88,31 +84,19 @@ export async function POST(req: NextRequest) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: base64, mime: "image/jpeg", name: `tic-${stamp}.jpg` }),
         });
-      } catch {
-        /* si Drive falla, igual seguimos con la impresión */
+        driveOk = true;
+      } catch (err) {
+        driveError = errorMessage(err);
       }
     }
 
-    const printer = process.env.PRINTER_NAME?.trim();
-    const copies = Math.max(1, parseInt(process.env.PRINT_COPIES?.trim() || "1", 10) || 1);
-
-    try {
-      const message = IS_WINDOWS
-        ? await printWindows(tmpFile, printer, copies)
-        : await printUnix(tmpFile, printer, copies);
-      return NextResponse.json({ ok: true, message, savedPath });
-    } catch (printErr) {
-      // Si no hay impresora, igual guardamos la copia: no es un fallo total.
-      if (savedPath) {
-        return NextResponse.json({
-          ok: true,
-          message: `Sin impresora: se guardó la hoja en ${savedPath}`,
-          savedPath,
-          printError: errorMessage(printErr),
-        });
-      }
-      throw printErr;
-    }
+    return NextResponse.json({
+      ok: true,
+      message: driveOk ? "Subida a Drive" : "Guardada local",
+      savedPath,
+      driveOk,
+      ...(driveError ? { driveError } : {}),
+    });
   } catch (err) {
     return NextResponse.json({ ok: false, error: errorMessage(err) }, { status: 500 });
   } finally {
@@ -123,42 +107,6 @@ export async function POST(req: NextRequest) {
       setTimeout(() => unlink(file).catch(() => {}), 15000);
     }
   }
-}
-
-async function printUnix(file: string, printer: string | undefined, copies: number) {
-  const media = process.env.PRINT_MEDIA?.trim();
-  const args: string[] = [];
-  if (printer) args.push("-d", printer); // sin -d usa la impresora default
-  args.push("-n", String(copies));
-  args.push("-o", "fit-to-page");
-  if (media) args.push("-o", `media=${media}`); // ej: 4x6.Borderless, Custom.2x6in
-  args.push(file);
-
-  const { stdout } = await execFileP("lp", args);
-  return stdout.trim() || "Enviado a la impresora (lp).";
-}
-
-async function printWindows(file: string, printer: string | undefined, copies: number) {
-  const sumatra = process.env.SUMATRA_PATH?.trim();
-
-  for (let i = 0; i < copies; i++) {
-    if (sumatra) {
-      // SumatraPDF: silencioso y respeta mejor el escalado/papel.
-      const args = printer
-        ? ["-print-to", printer, "-silent", file]
-        : ["-print-to-default", "-silent", file];
-      await execFileP(sumatra, args);
-    } else {
-      // mspaint viene con Windows. "/pt" = print to (silencioso, sin abrir Paint).
-      const args = printer ? ["/pt", file, printer] : ["/pt", file];
-      await execFileP("mspaint", args);
-    }
-    if (i < copies - 1) await wait(2000); // separar las copias para no pisar el spool
-  }
-
-  return sumatra
-    ? "Enviado a la impresora (SumatraPDF)."
-    : "Enviado a la impresora (mspaint).";
 }
 
 function errorMessage(err: unknown): string {
