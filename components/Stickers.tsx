@@ -7,12 +7,12 @@ type BigSticker = { src: string; top: string; left: string; size: number; rot: n
 
 const BIG_STICKERS: BigSticker[] = [
   // Repartidos hacia los bordes; solo la cruz y el "2026" se superponen al título.
-  { src: "/stickers/persona.svg", top: "12%", left: "8%", size: 90, rot: -8 },
+  { src: "/stickers/persona.png", top: "12%", left: "8%", size: 90, rot: -8 },
   { src: "/stickers/cerebro-verde.svg", top: "9%", left: "26%", size: 92, rot: -6 },
   { src: "/stickers/pluma.svg", top: "8%", left: "72%", size: 94, rot: 10 },
   { src: "/stickers/pacman.svg", top: "14%", left: "88%", size: 80, rot: 8 },
   { src: "/stickers/satelite.svg", top: "66%", left: "9%", size: 108, rot: -10 },
-  { src: "/stickers/celular.svg", top: "64%", left: "86%", size: 86, rot: 12 },
+  { src: "/stickers/celular.png", top: "64%", left: "86%", size: 86, rot: 12 },
   // Estos dos sí se superponen al texto "PHOTO BOOTH":
   { src: "/stickers/tag2026.svg", top: "30%", left: "66%", size: 150, rot: -10 },
   { src: "/stickers/cruz.svg", top: "55%", left: "63%", size: 150, rot: 6 },
