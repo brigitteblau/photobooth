@@ -11,6 +11,12 @@ export const runtime = "nodejs";
 const execFileP = promisify(execFile);
 const IS_WINDOWS = process.platform === "win32";
 
+// URL del Apps Script que guarda en Drive. Por defecto va incrustada para que
+// suba en cualquier compu sin tener que configurar .env.local; igual se puede
+// sobreescribir con la variable de entorno DRIVE_UPLOAD_URL.
+const DEFAULT_DRIVE_URL =
+  "https://script.google.com/macros/s/AKfycbzVXEB6l2XEB76c48bmcQAJplUa_9JhvqTbId2kolmJFF_XPlITAfbxF_59qfRBhoDHgA/exec";
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -80,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // Subida a Google Drive (vía un Apps Script Web App), si está configurado.
     // No bloquea ni hace fallar la impresión si Drive falla.
-    const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim();
+    const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim() || DEFAULT_DRIVE_URL;
     if (driveUrl) {
       try {
         await fetch(driveUrl, {
