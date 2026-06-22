@@ -43,14 +43,26 @@ async function ensureFonts() {
   }
 }
 
-// Confetti chico dentro del marco (posiciones relativas).
-const CONFETTI: { x: number; y: number; r: number; color: string; type: "dot" | "tri" }[] = [
-  { x: 0.06, y: 0.16, r: 9, color: "#3BA0FF", type: "dot" },
-  { x: 0.94, y: 0.15, r: 9, color: "#9FEA18", type: "dot" },
-  { x: 0.06, y: 0.52, r: 10, color: "#A431FF", type: "tri" },
-  { x: 0.95, y: 0.55, r: 9, color: "#FF6C31", type: "dot" },
-  { x: 0.08, y: 0.86, r: 9, color: "#9FEA18", type: "dot" },
-  { x: 0.92, y: 0.87, r: 10, color: "#F2C50D", type: "tri" },
+// Confetti dentro del marco. Posiciones relativas, SOLO en las zonas navy que
+// no tapan las fotos: la franja del header (arriba) y la del pie (abajo).
+type ConfettiType = "dot" | "tri" | "plus" | "spark";
+const CONFETTI: { x: number; y: number; r: number; color: string; type: ConfettiType }[] = [
+  // Header (arriba)
+  { x: 0.07, y: 0.07, r: 11, color: "#3BA0FF", type: "dot" },
+  { x: 0.14, y: 0.12, r: 13, color: "#9FEA18", type: "tri" },
+  { x: 0.24, y: 0.06, r: 14, color: "#F2C50D", type: "spark" },
+  { x: 0.3, y: 0.13, r: 12, color: "#A431FF", type: "plus" },
+  { x: 0.7, y: 0.12, r: 12, color: "#FF6C31", type: "plus" },
+  { x: 0.76, y: 0.06, r: 14, color: "#3BA0FF", type: "spark" },
+  { x: 0.86, y: 0.12, r: 13, color: "#F2C50D", type: "tri" },
+  { x: 0.93, y: 0.07, r: 11, color: "#9FEA18", type: "dot" },
+  // Pie (abajo)
+  { x: 0.08, y: 0.95, r: 11, color: "#A431FF", type: "dot" },
+  { x: 0.18, y: 0.93, r: 13, color: "#F2C50D", type: "tri" },
+  { x: 0.3, y: 0.96, r: 13, color: "#3BA0FF", type: "spark" },
+  { x: 0.7, y: 0.96, r: 13, color: "#9FEA18", type: "spark" },
+  { x: 0.82, y: 0.93, r: 13, color: "#FF6C31", type: "tri" },
+  { x: 0.92, y: 0.95, r: 11, color: "#F2C50D", type: "dot" },
 ];
 
 function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -58,16 +70,30 @@ function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.fillStyle = c.color;
     const px = c.x * w;
     const py = c.y * h;
+    const r = c.r;
     if (c.type === "dot") {
       ctx.beginPath();
-      ctx.arc(px, py, c.r, 0, Math.PI * 2);
+      ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.fill();
-    } else {
+    } else if (c.type === "tri") {
       ctx.beginPath();
-      ctx.moveTo(px, py - c.r);
-      ctx.lineTo(px + c.r, py + c.r);
-      ctx.lineTo(px - c.r, py + c.r);
+      ctx.moveTo(px, py - r);
+      ctx.lineTo(px + r, py + r);
+      ctx.lineTo(px - r, py + r);
       ctx.closePath();
+      ctx.fill();
+    } else if (c.type === "plus") {
+      const t = r * 0.42;
+      ctx.fillRect(px - t, py - r, t * 2, r * 2);
+      ctx.fillRect(px - r, py - t, r * 2, t * 2);
+    } else {
+      // spark: estrella de 4 puntas
+      ctx.beginPath();
+      ctx.moveTo(px, py - r);
+      ctx.quadraticCurveTo(px, py, px + r, py);
+      ctx.quadraticCurveTo(px, py, px, py + r);
+      ctx.quadraticCurveTo(px, py, px - r, py);
+      ctx.quadraticCurveTo(px, py, px, py - r);
       ctx.fill();
     }
   }
