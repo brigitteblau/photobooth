@@ -12,7 +12,7 @@ tu propia cuenta (la dueña del Drive). Se configura una vez.
 ```javascript
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
-  var folder = DriveApp.getFolderById("1dmLcZaP6P7HQQxP5nU8EGSEub7UOWmmF");
+  var folder = DriveApp.getFolderById("1p9zMaSxSz-RgKy0YDXQZ1W65gZYMD2re");
   var bytes = Utilities.base64Decode(data.image);
   var name = data.name || ("tic-" + Date.now() + ".jpg");
   var blob = Utilities.newBlob(bytes, data.mime || "image/jpeg", name);
@@ -23,7 +23,7 @@ function doPost(e) {
 }
 ```
 
-> El ID `1dmLcZaP6P7HQQxP5nU8EGSEub7UOWmmF` es el de tu carpeta (sale del link).
+> El ID `1p9zMaSxSz-RgKy0YDXQZ1W65gZYMD2re` es el de tu carpeta (sale del link).
 > Si cambiás de carpeta, reemplazá ese ID.
 
 ## Paso 2 — Desplegar como Web App
@@ -47,6 +47,12 @@ Reiniciá `npm run dev`. Listo: cada foto impresa se guarda sola en la carpeta.
 
 ## Notas
 
+- ⚠️ Usá un **Gmail personal** para el script. Las cuentas institucionales
+  (ej. ORT) suelen bloquear que el Web App sea público ("Anyone") y devuelven
+  403. La carpeta de Drive tiene que ser de ese Gmail o estar compartida con él
+  como Editor.
 - La subida necesita **internet** en la compu del evento. Si la red bloquea
   Google (firewall), la impresión igual funciona; solo no sube a Drive.
 - Si Drive falla, NO frena ni rompe la impresión (es "best effort").
+- Pase lo que pase, cada foto impresa se guarda local en
+  `Escritorio/photobooth-prints`.
