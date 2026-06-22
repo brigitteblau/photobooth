@@ -3,6 +3,7 @@
 import { usePhotobooth } from "@/hooks/usePhotobooth";
 import { IntroStep } from "@/components/steps/IntroStep";
 import { CameraStep } from "@/components/steps/CameraStep";
+import { ReviewStep } from "@/components/steps/ReviewStep";
 import { ResultStep } from "@/components/steps/ResultStep";
 import { Stickers } from "@/components/Stickers";
 
@@ -34,6 +35,14 @@ export function Photobooth() {
           scanningIndex={pb.scanningIndex}
           cameraError={pb.cameraError}
           onStart={pb.startExperience}
+        />
+      )}
+
+      {pb.step === "review" && pb.finalStrip && (
+        <ReviewStep
+          finalStrip={pb.finalStrip}
+          onConfirm={pb.confirmPrint}
+          onRetake={pb.retake}
         />
       )}
 

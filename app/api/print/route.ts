@@ -78,6 +78,21 @@ export async function POST(req: NextRequest) {
       savedPath = "";
     }
 
+    // Subida a Google Drive (vía un Apps Script Web App), si está configurado.
+    // No bloquea ni hace fallar la impresión si Drive falla.
+    const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim();
+    if (driveUrl) {
+      try {
+        await fetch(driveUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64, mime: "image/jpeg", name: `tic-${stamp}.jpg` }),
+        });
+      } catch {
+        /* si Drive falla, igual seguimos con la impresión */
+      }
+    }
+
     const printer = process.env.PRINTER_NAME?.trim();
     const copies = Math.max(1, parseInt(process.env.PRINT_COPIES?.trim() || "1", 10) || 1);
 

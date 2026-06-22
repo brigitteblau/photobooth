@@ -8,6 +8,7 @@ export type Step =
   | "camera"
   | "countdown"
   | "shooting"
+  | "review"
   | "printing"
   | "done";
 
@@ -47,6 +48,8 @@ export function usePhotobooth() {
   const runningRef = useRef(false);
   // Guardamos el stream para reconectarlo cuando el <video> se vuelve a montar.
   const streamRef = useRef<MediaStream | null>(null);
+  // Collage actual (para confirmar la impresión desde la pantalla de review).
+  const collageRef = useRef<string | null>(null);
 
   const startCamera = useCallback(async () => {
     setCameraError("");
@@ -152,7 +155,8 @@ export function usePhotobooth() {
     setStep("camera");
   }, []);
 
-  // Secuencia completa y automática: countdown -> 4 fotos -> tira -> imprime -> vuelve.
+  // Saca las 4 fotos, arma el collage y PARA en la pantalla de review para que
+  // la persona decida si imprimir o volver a sacarse la foto.
   const startExperience = useCallback(async () => {
     if (runningRef.current) return;
     runningRef.current = true;
@@ -160,6 +164,7 @@ export function usePhotobooth() {
     try {
       setPhotos([]);
       setFinalStrip(null);
+      collageRef.current = null;
       setStep("countdown");
 
       for (let i = 3; i >= 1; i--) {
@@ -197,20 +202,33 @@ export function usePhotobooth() {
 
       // Las 4 fotos en una sola hoja Carta (marco TIC EXPERIENCE, grilla 2x2).
       const collage = await createCollage(newPhotos);
+      collageRef.current = collage;
       setFinalStrip(collage);
 
-      // Impresión automática, sin que la persona toque nada.
-      setStep("printing");
-      await sendToPrinter(collage);
-
-      // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
-      setStep("done");
-      await wait(DONE_SCREEN_MS);
-      reset();
+      // Pantalla de confirmación: la persona elige imprimir o repetir.
+      setStep("review");
     } finally {
       runningRef.current = false;
     }
+  }, []);
+
+  // La persona confirma: imprime (y se guarda/sube), luego vuelve solo.
+  const confirmPrint = useCallback(async () => {
+    const collage = collageRef.current;
+    if (!collage) return;
+
+    setStep("printing");
+    await sendToPrinter(collage);
+
+    setStep("done");
+    await wait(DONE_SCREEN_MS);
+    reset();
   }, [reset, sendToPrinter]);
+
+  // La persona no quedó conforme: vuelve a sacarse las fotos.
+  const retake = useCallback(() => {
+    startExperience();
+  }, [startExperience]);
 
   // Botón físico (arcade USB / encoder configurado como Space).
   useEffect(() => {
@@ -222,13 +240,15 @@ export function usePhotobooth() {
         startCamera();
       } else if (step === "camera") {
         startExperience();
+      } else if (step === "review") {
+        confirmPrint(); // el botón físico = imprimir; "volver a sacar" es en pantalla
       }
       // Durante countdown/shooting/printing/done el botón se ignora.
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [step, startCamera, startExperience]);
+  }, [step, startCamera, startExperience, confirmPrint]);
 
   return {
     videoRef,
@@ -244,6 +264,8 @@ export function usePhotobooth() {
     printError,
     startCamera,
     startExperience,
+    confirmPrint,
+    retake,
     reset,
   };
 }
