@@ -15,21 +15,19 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
   const failed = printStatus === "error";
 
   return (
-    <section className="grid w-full max-w-[1100px] grid-cols-1 items-center gap-8 md:grid-cols-[auto_1fr]">
-      <div className="strip-reveal mx-auto max-h-[82vh] overflow-hidden rounded-xl shadow-2xl shadow-black/60">
-        <img src={finalStrip} alt="Tira final" className="max-h-[82vh] rounded-xl object-contain" />
+    <section className="relative z-10 grid w-full max-w-[1100px] grid-cols-1 items-center gap-8 md:grid-cols-[1.4fr_.6fr]">
+      <div className="strip-reveal mx-auto max-h-[82vh] overflow-hidden rounded-2xl border-4 border-[var(--pink)] shadow-2xl shadow-black/50">
+        <img src={finalStrip} alt="Tira final" className="max-h-[80vh] object-contain" />
       </div>
 
-      <aside className="flex flex-col gap-6 rounded-2xl border border-white/8 bg-white/3 p-8 backdrop-blur">
+      <aside className="flex flex-col gap-6 rounded-[28px] bg-[var(--pink)] p-8 shadow-2xl shadow-black/40">
         {printing && (
           <>
-            <Loader2 size={40} className="animate-spin text-[#FF5C2B]" />
+            <Loader2 size={42} className="animate-spin text-white" />
             <div>
-              <h2 className="font-sans text-5xl font-bold tracking-[-0.05em] text-white">
-                Imprimiendo…
-              </h2>
-              <p className="mt-3 font-mono text-sm leading-relaxed text-white/40">
-                Tu tira se está imprimiendo. Esperá un momento.
+              <h2 className="font-display text-4xl tracking-[-0.02em] text-white">Imprimiendo…</h2>
+              <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/80">
+                Tu foto se está imprimiendo. Esperá un momento.
               </p>
             </div>
           </>
@@ -37,15 +35,15 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
 
         {!printing && !failed && (
           <>
-            <CheckCircle2 size={40} className="text-[#FF5C2B]" />
+            <CheckCircle2 size={42} className="text-white" />
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[#FF5C2B]">
+              <p className="font-mono-tic text-[10px] uppercase tracking-[0.35em] text-white/80">
                 ● Listo
               </p>
-              <h2 className="mt-2 font-sans text-5xl font-bold tracking-[-0.05em] text-white">
+              <h2 className="font-display mt-2 text-4xl tracking-[-0.02em] text-white">
                 Retirá tu foto
               </h2>
-              <p className="mt-3 font-mono text-sm leading-relaxed text-white/40">
+              <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/80">
                 Gracias. Preparando la próxima toma…
               </p>
             </div>
@@ -54,12 +52,12 @@ export function ResultStep({ finalStrip, step, printStatus, printError }: Result
 
         {!printing && failed && (
           <>
-            <Printer size={40} className="text-red-300" />
+            <Printer size={42} className="text-white" />
             <div>
-              <h2 className="font-sans text-4xl font-bold tracking-[-0.05em] text-white">
+              <h2 className="font-display text-3xl tracking-[-0.02em] text-white">
                 No se pudo imprimir
               </h2>
-              <p className="mt-3 font-mono text-sm leading-relaxed text-red-200/80">
+              <p className="font-mono-tic mt-3 text-sm leading-relaxed text-white/90">
                 {printError || "Revisá que la impresora esté encendida y configurada."}
               </p>
             </div>

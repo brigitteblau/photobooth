@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSheet, createStrip } from "@/lib/stripRenderer";
+import { createCollage } from "@/lib/collageRenderer";
 
 export type Step =
   | "intro"
@@ -25,10 +25,6 @@ export const POSE_PROMPTS = [
 const CAPTURE_DELAY_MS = 1200;
 // Tiempo que se muestra "retirá tu foto" antes de volver al estado listo.
 const DONE_SCREEN_MS = 6000;
-// Distribución de copias en la hoja: columnas x filas.
-// 2 x 2 = 4 copias (2 arriba, 2 abajo), ideal para papel Carta/A4.
-const SHEET_COLS = 2;
-const SHEET_ROWS = 2;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,14 +45,19 @@ export function usePhotobooth() {
 
   // Evita que un segundo botonazo dispare la secuencia mientras ya corre.
   const runningRef = useRef(false);
+  // Guardamos el stream para reconectarlo cuando el <video> se vuelve a montar.
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startCamera = useCallback(async () => {
     setCameraError("");
     setStep("camera");
 
-    // Si ya hay un stream activo (re-arranque del loop) no lo pedimos de nuevo.
-    if (videoRef.current?.srcObject) {
-      await videoRef.current.play().catch(() => {});
+    // Si ya pedimos la cámara antes, reusamos el mismo stream (no re-pedimos).
+    if (streamRef.current) {
+      if (videoRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        await videoRef.current.play().catch(() => {});
+      }
       return;
     }
 
@@ -65,6 +66,7 @@ export function usePhotobooth() {
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -74,6 +76,18 @@ export function usePhotobooth() {
       setCameraError("No se pudo abrir la cámara. Revisá permisos.");
     }
   }, []);
+
+  // Cada vez que volvemos a la cámara, el <video> se re-monta y pierde el
+  // srcObject: lo reconectamos para no quedarnos sin imagen.
+  useEffect(() => {
+    if (step !== "camera" && step !== "countdown" && step !== "shooting") return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (video && stream && video.srcObject !== stream) {
+      video.srcObject = stream;
+      video.play().catch(() => {});
+    }
+  }, [step]);
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -162,9 +176,12 @@ export function usePhotobooth() {
         setPoseIndex(i);
         await wait(CAPTURE_DELAY_MS);
 
+        // Prendemos el flash y esperamos un frame para que se pinte ANTES de
+        // capturar, así la luz blanca coincide con el momento de la foto.
         setFlash(true);
+        await wait(90);
         const photo = capturePhoto();
-        await wait(120);
+        await wait(90);
         setFlash(false);
 
         if (photo) {
@@ -178,14 +195,13 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      const strip = await createStrip(newPhotos);
-      setFinalStrip(strip);
+      // Las 4 fotos en una sola hoja Carta (marco TIC EXPERIENCE, grilla 2x2).
+      const collage = await createCollage(newPhotos);
+      setFinalStrip(collage);
 
       // Impresión automática, sin que la persona toque nada.
-      // Se imprime una hoja con varias copias de la tira (para cortar).
       setStep("printing");
-      const sheet = await createSheet(strip, SHEET_COLS, SHEET_ROWS);
-      await sendToPrinter(sheet);
+      await sendToPrinter(collage);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
       setStep("done");
