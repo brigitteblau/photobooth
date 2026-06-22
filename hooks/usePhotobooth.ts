@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createA4Sheet, createCollage } from "@/lib/collageRenderer";
+import { createCollage } from "@/lib/collageRenderer";
 
 export type Step =
   | "intro"
@@ -118,7 +118,7 @@ export function usePhotobooth() {
     return canvas.toDataURL("image/png");
   }
 
-  // SIMULACIÓN: en vez de imprimir, genera un PDF tamaño A4 horizontal que
+  // SIMULACIÓN: en vez de imprimir, genera un PDF tamaño A5 horizontal que
   // muestra exactamente cómo va a quedar la hoja impresa, y lo abre/descarga.
   const generatePdf = useCallback(async (sheet: string) => {
     setPrintStatus("printing");
@@ -126,9 +126,9 @@ export function usePhotobooth() {
 
     try {
       const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      // La hoja ya tiene proporción A4 apaisada (297x210), así que llena la página.
-      pdf.addImage(sheet, "JPEG", 0, 0, 297, 210);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a5" });
+      // La hoja ya tiene proporción A5 apaisada (210x148), así que llena la página.
+      pdf.addImage(sheet, "JPEG", 0, 0, 210, 148);
 
       const blob = pdf.output("blob");
       const url = URL.createObjectURL(blob);
@@ -203,16 +203,15 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      // Las 4 fotos en un collage 2x2 y la hoja A4 con 4 copias.
+      // Las 4 fotos en una hoja A5 (marco TIC EXPERIENCE, grilla 2x2).
       const collage = await createCollage(newPhotos);
-      const sheet = await createA4Sheet(collage);
 
-      // Mostramos la HOJA completa en pantalla (lo mismo que tendrá el PDF).
-      setFinalStrip(sheet);
+      // Mostramos la hoja en pantalla (lo mismo que tendrá el PDF).
+      setFinalStrip(collage);
 
-      // SIMULACIÓN: además generamos el PDF A4 de previsualización.
+      // SIMULACIÓN: generamos el PDF A5 de previsualización.
       setStep("printing");
-      await generatePdf(sheet);
+      await generatePdf(collage);
 
       // Pantalla de "retirá tu foto" y vuelta automática al estado listo.
       setStep("done");

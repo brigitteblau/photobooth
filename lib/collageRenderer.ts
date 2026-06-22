@@ -1,8 +1,6 @@
-// Renderer del marco de impresión (rama simulacion-pdf):
-//  - createCollage: marco TIC EXPERIENCE 2026 con las 4 fotos en grilla 2x2 y
-//    el pie ORT, fondo navy con borde rosa y confetti (como el diseño).
-//  - createA4Sheet: 4 copias de ese marco en una hoja A4 horizontal, con líneas
-//    de corte, para previsualizar en PDF.
+// Marco de impresión (rama automatizacion): UNA sola hoja Carta (Letter) con
+// las 4 fotos en grilla 2x2. El fondo navy ocupa toda la hoja (full-bleed),
+// con un margen y un borde redondeado rosa TIC por dentro. Pie con logo ORT.
 
 const NAVY = "#0C043F";
 const PINK = "#FB276A";
@@ -36,25 +34,35 @@ function roundRect(
 async function ensureFonts() {
   try {
     if (typeof document !== "undefined" && document.fonts) {
-      await document.fonts.load('900 64px Raleway');
+      await document.fonts.load("900 64px Raleway");
       await document.fonts.load('400 24px "Roboto Mono"');
       await document.fonts.ready;
     }
   } catch {
-    /* si falla, se usa la fuente por defecto */
+    /* fuente por defecto */
   }
 }
 
-// Confetti chico dentro del marco (posiciones relativas al ancho/alto).
-const CONFETTI: { x: number; y: number; r: number; color: string; type: "dot" | "tri" }[] = [
-  { x: 0.07, y: 0.2, r: 7, color: "#3BA0FF", type: "dot" },
-  { x: 0.93, y: 0.18, r: 7, color: "#9FEA18", type: "dot" },
-  { x: 0.5, y: 0.13, r: 7, color: "#F2C50D", type: "tri" },
-  { x: 0.06, y: 0.55, r: 8, color: "#A431FF", type: "tri" },
-  { x: 0.95, y: 0.6, r: 7, color: "#FF6C31", type: "dot" },
-  { x: 0.1, y: 0.85, r: 7, color: "#9FEA18", type: "dot" },
-  { x: 0.9, y: 0.86, r: 8, color: "#F2C50D", type: "tri" },
-  { x: 0.5, y: 0.93, r: 6, color: "#3BA0FF", type: "dot" },
+// Confetti dentro del marco. Posiciones relativas, SOLO en las zonas navy que
+// no tapan las fotos: la franja del header (arriba) y la del pie (abajo).
+type ConfettiType = "dot" | "tri" | "plus" | "spark";
+const CONFETTI: { x: number; y: number; r: number; color: string; type: ConfettiType }[] = [
+  // Header (arriba)
+  { x: 0.07, y: 0.07, r: 11, color: "#3BA0FF", type: "dot" },
+  { x: 0.14, y: 0.12, r: 13, color: "#9FEA18", type: "tri" },
+  { x: 0.24, y: 0.06, r: 14, color: "#F2C50D", type: "spark" },
+  { x: 0.3, y: 0.13, r: 12, color: "#A431FF", type: "plus" },
+  { x: 0.7, y: 0.12, r: 12, color: "#FF6C31", type: "plus" },
+  { x: 0.76, y: 0.06, r: 14, color: "#3BA0FF", type: "spark" },
+  { x: 0.86, y: 0.12, r: 13, color: "#F2C50D", type: "tri" },
+  { x: 0.93, y: 0.07, r: 11, color: "#9FEA18", type: "dot" },
+  // Pie (abajo)
+  { x: 0.08, y: 0.95, r: 11, color: "#A431FF", type: "dot" },
+  { x: 0.18, y: 0.93, r: 13, color: "#F2C50D", type: "tri" },
+  { x: 0.3, y: 0.96, r: 13, color: "#3BA0FF", type: "spark" },
+  { x: 0.7, y: 0.96, r: 13, color: "#9FEA18", type: "spark" },
+  { x: 0.82, y: 0.93, r: 13, color: "#FF6C31", type: "tri" },
+  { x: 0.92, y: 0.95, r: 11, color: "#F2C50D", type: "dot" },
 ];
 
 function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -62,31 +70,45 @@ function drawConfetti(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.fillStyle = c.color;
     const px = c.x * w;
     const py = c.y * h;
+    const r = c.r;
     if (c.type === "dot") {
       ctx.beginPath();
-      ctx.arc(px, py, c.r, 0, Math.PI * 2);
+      ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.fill();
-    } else {
+    } else if (c.type === "tri") {
       ctx.beginPath();
-      ctx.moveTo(px, py - c.r);
-      ctx.lineTo(px + c.r, py + c.r);
-      ctx.lineTo(px - c.r, py + c.r);
+      ctx.moveTo(px, py - r);
+      ctx.lineTo(px + r, py + r);
+      ctx.lineTo(px - r, py + r);
       ctx.closePath();
+      ctx.fill();
+    } else if (c.type === "plus") {
+      const t = r * 0.42;
+      ctx.fillRect(px - t, py - r, t * 2, r * 2);
+      ctx.fillRect(px - r, py - t, r * 2, t * 2);
+    } else {
+      // spark: estrella de 4 puntas
+      ctx.beginPath();
+      ctx.moveTo(px, py - r);
+      ctx.quadraticCurveTo(px, py, px + r, py);
+      ctx.quadraticCurveTo(px, py, px, py + r);
+      ctx.quadraticCurveTo(px, py, px - r, py);
+      ctx.quadraticCurveTo(px, py, px, py - r);
       ctx.fill();
     }
   }
 }
 
 /**
- * Las 4 fotos en grilla 2x2 dentro del marco TIC EXPERIENCE 2026 (con ORT).
- * Proporción ~A4/4 horizontal, para que al cortar la hoja cada copia quede
- * de un tamaño tipo foto 10x15.
+ * UNA hoja A5 horizontal con las 4 fotos en grilla 2x2.
+ * Navy a toda la hoja + borde rosa redondeado con margen. Pie ORT.
  */
 export async function createCollage(photoList: string[]): Promise<string> {
   await ensureFonts();
 
-  const width = 1414;
-  const height = 1000;
+  // A5 horizontal: 210 x 148 mm -> proporción 1.419. A 300 dpi.
+  const width = 2480;
+  const height = 1748;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -94,87 +116,82 @@ export async function createCollage(photoList: string[]): Promise<string> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  // Fondo navy + borde rosa
+  // Fondo navy a toda la hoja (full-bleed, sin bordes blancos)
   ctx.fillStyle = NAVY;
-  roundRect(ctx, 0, 0, width, height, 28);
-  ctx.fill();
-  ctx.lineWidth = 14;
-  ctx.strokeStyle = PINK;
-  roundRect(ctx, 7, 7, width - 14, height - 14, 24);
-  ctx.stroke();
+  ctx.fillRect(0, 0, width, height);
 
   drawConfetti(ctx, width, height);
 
-  // ---- Header: TIC EXPERIENCE (con la cruz como X) + 2026 ----
-  ctx.textBaseline = "alphabetic";
-  ctx.font = '900 78px Raleway, Arial';
-  ctx.textAlign = "left";
+  // Borde rosa redondeado, con margen respecto al papel
+  const margin = 52;
+  ctx.strokeStyle = PINK;
+  ctx.lineWidth = 12;
+  roundRect(ctx, margin, margin, width - margin * 2, height - margin * 2, 64);
+  ctx.stroke();
 
-  const part1 = "E";
-  const part2 = "PERIENCE";
-  const w1 = ctx.measureText(part1).width;
-  const w2 = ctx.measureText(part2).width;
-  const crossSize = 86;
+  // ---- Header: TIC E✚PERIENCE 2026 ----
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "900 90px Raleway, Arial";
+  ctx.textAlign = "left";
+  const w1 = ctx.measureText("E").width;
+  const w2 = ctx.measureText("PERIENCE").width;
+  const crossSize = 100;
   const totalW = w1 + crossSize * 0.78 + w2;
   const sx = (width - totalW) / 2;
-  const baseY = 168;
+  const baseY = 180;
 
-  // "TIC" arriba, alineado a la izquierda con EXPERIENCE
-  ctx.font = '900 48px Raleway, Arial';
+  ctx.font = "900 54px Raleway, Arial";
   ctx.fillStyle = "#ffffff";
-  ctx.fillText("TIC", sx, baseY - 70);
+  ctx.fillText("TIC", sx, baseY - 82);
 
-  // "EXPERIENCE" con la cruz como X
-  ctx.font = '900 78px Raleway, Arial';
+  ctx.font = "900 90px Raleway, Arial";
   ctx.fillStyle = "#ffffff";
-  ctx.fillText(part1, sx, baseY);
+  ctx.fillText("E", sx, baseY);
   try {
     const cross = await loadImage("/stickers/cruz.svg");
-    ctx.drawImage(cross, sx + w1 - 10, baseY - crossSize + 10, crossSize, crossSize);
+    ctx.drawImage(cross, sx + w1 - 10, baseY - crossSize + 12, crossSize, crossSize);
   } catch {
     ctx.fillText("X", sx + w1, baseY);
   }
-  ctx.fillText(part2, sx + w1 + crossSize * 0.78, baseY);
+  ctx.fillText("PERIENCE", sx + w1 + crossSize * 0.78, baseY);
 
-  // Etiqueta 2026
   try {
     const tag = await loadImage("/stickers/tag2026.svg");
-    const tagW = 130;
+    const tagW = 150;
     const tagH = (tag.height / tag.width) * tagW;
-    ctx.drawImage(tag, sx + totalW - 40, baseY - 118, tagW, tagH);
+    ctx.drawImage(tag, sx + totalW - 45, baseY - 138, tagW, tagH);
   } catch {
     /* sin tag */
   }
 
-  // Línea bajo el header
   ctx.strokeStyle = PINK;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(60, 210);
-  ctx.lineTo(width - 60, 210);
+  ctx.moveTo(120, 232);
+  ctx.lineTo(width - 120, 232);
   ctx.stroke();
 
   // ---- Fotos en grilla 2x2 ----
-  const pad = 56;
-  const gap = 22;
-  const top = 238;
-  const footerH = 96;
+  const padX = 110;
+  const gap = 34;
+  const top = 250;
+  const footerH = 160;
   const cols = 2;
   const rows = 2;
-  const photoW = (width - pad * 2 - gap * (cols - 1)) / cols;
+  const photoW = (width - padX * 2 - gap * (cols - 1)) / cols;
   const photoAreaH = height - top - footerH;
   const photoH = (photoAreaH - gap * (rows - 1)) / rows;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const index = r * cols + c;
-      const x = pad + c * (photoW + gap);
+      const x = padX + c * (photoW + gap);
       const y = top + r * (photoH + gap);
 
       if (photoList[index]) {
         const img = await loadImage(photoList[index]);
         ctx.save();
-        roundRect(ctx, x, y, photoW, photoH, 30);
+        roundRect(ctx, x, y, photoW, photoH, 28);
         ctx.clip();
         const scale = Math.max(photoW / img.width, photoH / img.height);
         const dw = img.width * scale;
@@ -184,81 +201,29 @@ export async function createCollage(photoList: string[]): Promise<string> {
       }
 
       ctx.strokeStyle = PINK;
-      ctx.lineWidth = 6;
-      roundRect(ctx, x, y, photoW, photoH, 30);
+      ctx.lineWidth = 7;
+      roundRect(ctx, x, y, photoW, photoH, 28);
       ctx.stroke();
     }
   }
 
-  // ---- Pie: ORT (texto, hasta tener un logo usable) ----
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#ffffff";
-  ctx.font = '900 34px Raleway, Arial';
-  ctx.fillText("ORT", width / 2, height - footerH + 52);
-  ctx.font = '400 18px "Roboto Mono", monospace';
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.fillText("Educando para la vida", width / 2, height - footerH + 78);
-
-  return canvas.toDataURL("image/jpeg", 0.92);
-}
-
-/**
- * Hoja A4 HORIZONTAL con 4 copias del marco (grilla 2x2) y líneas de corte.
- * El canvas tiene la proporción exacta de una A4 apaisada para que el PDF
- * muestre fielmente cómo va a quedar impreso.
- */
-export async function createA4Sheet(collage: string): Promise<string> {
-  const width = 2970;
-  const height = 2100;
-  const margin = 70;
-  const gap = 70;
-  const cols = 2;
-  const rows = 2;
-
-  const cellW = (width - margin * 2 - gap * (cols - 1)) / cols;
-  const cellH = (height - margin * 2 - gap * (rows - 1)) / rows;
-
-  const img = await loadImage(collage);
-  const scale = Math.min(cellW / img.width, cellH / img.height);
-  const dw = img.width * scale;
-  const dh = img.height * scale;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return collage;
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const cellX = margin + c * (cellW + gap);
-      const cellY = margin + r * (cellH + gap);
-      ctx.drawImage(img, cellX + (cellW - dw) / 2, cellY + (cellH - dh) / 2, dw, dh);
-    }
+  // ---- Pie: logo ORT (blanco sobre navy) ----
+  // Lo centramos entre el final de las fotos y la línea inferior del borde
+  // rosa, para que esa línea NO se superponga sobre el logo.
+  const footerTop = top + photoAreaH; // donde terminan las fotos
+  const borderBottom = height - margin; // línea inferior del borde rosa
+  try {
+    const logo = await loadImage("/ort-logo.png");
+    const lh = 66;
+    const lw = (logo.width / logo.height) * lh;
+    const ly = footerTop + (borderBottom - footerTop - lh) / 2;
+    ctx.drawImage(logo, (width - lw) / 2, ly, lw, lh);
+  } catch {
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 48px Raleway, Arial";
+    ctx.fillText("ORT", width / 2, footerTop + (borderBottom - footerTop) / 2 + 16);
   }
-
-  ctx.save();
-  ctx.strokeStyle = "#9aa0a6";
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([10, 10]);
-  for (let c = 1; c < cols; c++) {
-    const lineX = margin + c * cellW + (c - 0.5) * gap;
-    ctx.beginPath();
-    ctx.moveTo(lineX, margin / 2);
-    ctx.lineTo(lineX, height - margin / 2);
-    ctx.stroke();
-  }
-  for (let r = 1; r < rows; r++) {
-    const lineY = margin + r * cellH + (r - 0.5) * gap;
-    ctx.beginPath();
-    ctx.moveTo(margin / 2, lineY);
-    ctx.lineTo(width - margin / 2, lineY);
-    ctx.stroke();
-  }
-  ctx.restore();
 
   return canvas.toDataURL("image/jpeg", 0.92);
 }
