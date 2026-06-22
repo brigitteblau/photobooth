@@ -182,16 +182,21 @@ export async function createCollage(photoList: string[]): Promise<string> {
   }
 
   // ---- Pie: logo ORT (blanco sobre navy) ----
+  // Lo centramos entre el final de las fotos y la línea inferior del borde
+  // rosa, para que esa línea NO se superponga sobre el logo.
+  const footerTop = top + photoAreaH; // donde terminan las fotos
+  const borderBottom = height - margin; // línea inferior del borde rosa
   try {
     const logo = await loadImage("/ort-logo.png");
-    const lh = 104;
+    const lh = 88;
     const lw = (logo.width / logo.height) * lh;
-    ctx.drawImage(logo, (width - lw) / 2, height - footerH + 70, lw, lh);
+    const ly = footerTop + (borderBottom - footerTop - lh) / 2;
+    ctx.drawImage(logo, (width - lw) / 2, ly, lw, lh);
   } catch {
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
     ctx.font = "900 48px Raleway, Arial";
-    ctx.fillText("ORT", width / 2, height - footerH + 110);
+    ctx.fillText("ORT", width / 2, footerTop + (borderBottom - footerTop) / 2 + 16);
   }
 
   return canvas.toDataURL("image/jpeg", 0.92);
