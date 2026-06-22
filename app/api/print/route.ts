@@ -11,6 +11,12 @@ export const runtime = "nodejs";
 const execFileP = promisify(execFile);
 const IS_WINDOWS = process.platform === "win32";
 
+// URL del Apps Script que guarda en Drive. Va incrustada para que suba en
+// cualquier compu sin configurar .env.local; se puede sobreescribir con la
+// variable de entorno DRIVE_UPLOAD_URL.
+const DEFAULT_DRIVE_URL =
+  "https://script.google.com/macros/s/AKfycbzVXEB6l2XEB76c48bmcQAJplUa_9JhvqTbId2kolmJFF_XPlITAfbxF_59qfRBhoDHgA/exec";
+
 /**
  * GET /api/print
  * Lista las impresoras instaladas. Abrí esta ruta en el navegador y copiá el
@@ -74,7 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     // MODO SOLO DRIVE: no se imprime. Solo se guarda local + se sube a Drive.
-    const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim();
+    const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim() || DEFAULT_DRIVE_URL;
     let driveOk = false;
     let driveError = "";
     if (driveUrl) {
