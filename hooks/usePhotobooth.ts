@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createCollage } from "@/lib/collageRenderer";
+import { createA4Sheet, createCollage } from "@/lib/collageRenderer";
 
 export type Step =
   | "intro"
@@ -200,10 +200,11 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      // Las 4 fotos en una sola hoja Carta (marco TIC EXPERIENCE, grilla 2x2).
+      // Las 4 fotos en el marco A5, y la hoja A4 con DOS copias (para cortar).
       const collage = await createCollage(newPhotos);
-      collageRef.current = collage;
-      setFinalStrip(collage);
+      const sheet = await createA4Sheet(collage);
+      collageRef.current = sheet;
+      setFinalStrip(sheet);
 
       // Pantalla de confirmación: la persona elige imprimir o repetir.
       setStep("review");
