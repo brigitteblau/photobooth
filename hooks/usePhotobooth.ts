@@ -200,7 +200,7 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      // Las 4 fotos en el marco A5, y la hoja A4 con DOS copias (para cortar).
+      // Las 4 fotos en el marco A5, y la hoja A4 con 4 copias (para cortar).
       const collage = await createCollage(newPhotos);
       const sheet = await createA4Sheet(collage);
       collageRef.current = sheet;
