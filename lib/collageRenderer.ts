@@ -227,3 +227,40 @@ export async function createCollage(photoList: string[]): Promise<string> {
 
   return canvas.toDataURL("image/jpeg", 0.92);
 }
+
+/**
+ * Hoja A4 VERTICAL con DOS copias del collage A5 (una arriba, otra abajo) y una
+ * línea de corte al medio. Al cortar la A4 por la mitad quedan dos tarjetas A5.
+ */
+export async function createA4Sheet(collage: string): Promise<string> {
+  const img = await loadImage(collage);
+
+  // A4 vertical: 210 x 297 mm -> 2480 x 3508 px a 300 dpi.
+  const width = 2480;
+  const height = 3508;
+  const halfH = height / 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return collage;
+
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, width, height);
+
+  // Dos copias, cada una ocupa la mitad de la hoja (mismo ancho A4).
+  ctx.drawImage(img, 0, 0, width, halfH);
+  ctx.drawImage(img, 0, halfH, width, halfH);
+
+  // Línea de corte punteada al medio.
+  ctx.strokeStyle = "rgba(255,255,255,0.6)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([16, 14]);
+  ctx.beginPath();
+  ctx.moveTo(40, halfH);
+  ctx.lineTo(width - 40, halfH);
+  ctx.stroke();
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
