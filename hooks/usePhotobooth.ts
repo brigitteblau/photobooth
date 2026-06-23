@@ -48,8 +48,9 @@ export function usePhotobooth() {
   const runningRef = useRef(false);
   // Guardamos el stream para reconectarlo cuando el <video> se vuelve a montar.
   const streamRef = useRef<MediaStream | null>(null);
-  // Collage actual (para confirmar la impresión desde la pantalla de review).
-  const collageRef = useRef<string | null>(null);
+  // Hoja A4 (4 copias) para imprimir, y el collage solo (1 copia) para Drive.
+  const collageRef = useRef<string | null>(null); // hoja A4 (impresión)
+  const driveRef = useRef<string | null>(null); // collage solo (Drive)
 
   const startCamera = useCallback(async () => {
     setCameraError("");
@@ -121,8 +122,9 @@ export function usePhotobooth() {
     return canvas.toDataURL("image/png");
   }
 
-  // Manda la tira a la impresora vía la API local (CUPS / lp). Silenciosa.
-  const sendToPrinter = useCallback(async (strip: string) => {
+  // Manda la hoja a imprimir (image) y, aparte, una sola copia a Drive
+  // (driveImage). Vía la API local. Silenciosa.
+  const sendToPrinter = useCallback(async (image: string, driveImage?: string) => {
     setPrintStatus("printing");
     setPrintError("");
 
@@ -130,7 +132,7 @@ export function usePhotobooth() {
       const res = await fetch("/api/print", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: strip }),
+        body: JSON.stringify({ image, driveImage }),
       });
       const data = await res.json();
 
@@ -200,10 +202,11 @@ export function usePhotobooth() {
         await wait(500);
       }
 
-      // Las 4 fotos en el marco A5, y la hoja A4 con DOS copias (para cortar).
+      // Las 4 fotos en el marco A5, y la hoja A4 con 4 copias (para cortar).
       const collage = await createCollage(newPhotos);
       const sheet = await createA4Sheet(collage);
-      collageRef.current = sheet;
+      collageRef.current = sheet; // se imprime la hoja A4 con 4 copias
+      driveRef.current = collage; // a Drive sube solo 1 copia (el collage)
       setFinalStrip(sheet);
 
       // Pantalla de confirmación: la persona elige imprimir o repetir.
@@ -215,11 +218,11 @@ export function usePhotobooth() {
 
   // La persona confirma: imprime (y se guarda/sube), luego vuelve solo.
   const confirmPrint = useCallback(async () => {
-    const collage = collageRef.current;
-    if (!collage) return;
+    const printImage = collageRef.current;
+    if (!printImage) return;
 
     setStep("printing");
-    await sendToPrinter(collage);
+    await sendToPrinter(printImage, driveRef.current ?? undefined);
 
     setStep("done");
     await wait(DONE_SCREEN_MS);

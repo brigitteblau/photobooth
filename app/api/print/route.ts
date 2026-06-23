@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
   let tmpFile: string | null = null;
 
   try {
-    const { image } = (await req.json()) as { image?: string };
+    const { image, driveImage } = (await req.json()) as {
+      image?: string;
+      driveImage?: string;
+    };
 
     if (!image || !image.startsWith("data:image/")) {
       return NextResponse.json(
@@ -79,7 +82,11 @@ export async function POST(req: NextRequest) {
       savedPath = "";
     }
 
-    // MODO SOLO DRIVE: no se imprime. Solo se guarda local + se sube a Drive.
+    // MODO SOLO DRIVE: no se imprime. Se guarda local y se sube a Drive SOLO
+    // una copia (driveImage = el collage); si no viene, sube la imagen recibida.
+    const driveSrc =
+      driveImage && driveImage.startsWith("data:image/") ? driveImage : image;
+    const driveBase64 = driveSrc.replace(/^data:image\/\w+;base64,/, "");
     const driveUrl = process.env.DRIVE_UPLOAD_URL?.trim() || DEFAULT_DRIVE_URL;
     let driveOk = false;
     let driveError = "";
@@ -88,7 +95,7 @@ export async function POST(req: NextRequest) {
         await fetch(driveUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64, mime: "image/jpeg", name: `tic-${stamp}.jpg` }),
+          body: JSON.stringify({ image: driveBase64, mime: "image/jpeg", name: `tic-${stamp}.jpg` }),
         });
         driveOk = true;
       } catch (err) {
