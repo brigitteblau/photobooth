@@ -126,9 +126,9 @@ export function usePhotobooth() {
 
     try {
       const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      // La hoja ya tiene proporción A4 vertical (210x297), así que llena la página.
-      pdf.addImage(sheet, "JPEG", 0, 0, 210, 297);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      // La hoja ya tiene proporción A4 horizontal (297x210), así que llena la página.
+      pdf.addImage(sheet, "JPEG", 0, 0, 297, 210);
 
       const blob = pdf.output("blob");
       const url = URL.createObjectURL(blob);
