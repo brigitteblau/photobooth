@@ -229,16 +229,20 @@ export async function createCollage(photoList: string[]): Promise<string> {
 }
 
 /**
- * Hoja A4 VERTICAL con DOS copias del collage A5 (una arriba, otra abajo) y una
- * línea de corte al medio. Al cortar la A4 por la mitad quedan dos tarjetas A5.
+ * Hoja A4 HORIZONTAL con CUATRO copias del collage A5 en grilla 2x2, llenando
+ * toda la hoja (el collage es A5, mitad de A4, así que entran 4 casi exactos).
+ * Líneas de corte vertical y horizontal -> al cortar quedan 4 tarjetas.
  */
 export async function createA4Sheet(collage: string): Promise<string> {
   const img = await loadImage(collage);
 
-  // A4 vertical: 210 x 297 mm -> 2480 x 3508 px a 300 dpi.
-  const width = 2480;
-  const height = 3508;
-  const halfH = height / 2;
+  // A4 horizontal: 297 x 210 mm -> 3508 x 2480 px a 300 dpi.
+  const width = 3508;
+  const height = 2480;
+  const cols = 2;
+  const rows = 2;
+  const cellW = width / cols;
+  const cellH = height / rows;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -249,17 +253,32 @@ export async function createA4Sheet(collage: string): Promise<string> {
   ctx.fillStyle = NAVY;
   ctx.fillRect(0, 0, width, height);
 
-  // Dos copias, cada una ocupa la mitad de la hoja (mismo ancho A4).
-  ctx.drawImage(img, 0, 0, width, halfH);
-  ctx.drawImage(img, 0, halfH, width, halfH);
+  // 4 copias, cada una llena su celda (cover-fit: escala uniforme, sin estirar).
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cellX = c * cellW;
+      const cellY = r * cellH;
+      const scale = Math.max(cellW / img.width, cellH / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cellX, cellY, cellW, cellH);
+      ctx.clip();
+      ctx.drawImage(img, cellX + (cellW - dw) / 2, cellY + (cellH - dh) / 2, dw, dh);
+      ctx.restore();
+    }
+  }
 
-  // Línea de corte punteada al medio.
+  // Líneas de corte punteadas (vertical y horizontal) al medio.
   ctx.strokeStyle = "rgba(255,255,255,0.6)";
   ctx.lineWidth = 2;
   ctx.setLineDash([16, 14]);
   ctx.beginPath();
-  ctx.moveTo(40, halfH);
-  ctx.lineTo(width - 40, halfH);
+  ctx.moveTo(cellW, 30);
+  ctx.lineTo(cellW, height - 30);
+  ctx.moveTo(30, cellH);
+  ctx.lineTo(width - 30, cellH);
   ctx.stroke();
 
   return canvas.toDataURL("image/jpeg", 0.92);
